@@ -67,8 +67,8 @@ class OrderListCreateView(generics.ListCreateAPIView):
                 order.status = 'INVENTORY_RESERVED'
                 order.save()
                 
-            # 3. Trigger Async Payment Task (outside the atomic block to ensure it runs only if DB commit succeeded)
-            process_payment.delay(order.id)
+            # 3. Trigger Async Payment Task only after the order transaction commits.
+            transaction.on_commit(lambda: process_payment.delay(order.id))
             
             # 4. Return success to user immediately
             order_data = OrderSerializer(order).data

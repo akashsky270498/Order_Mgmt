@@ -6,6 +6,7 @@ from apps.users.models import User
 from apps.inventory.models import Product
 from apps.orders.models import Order
 
+
 class PaymentTaskTest(TestCase):
     def setUp(self):
         self.client = APIClient()

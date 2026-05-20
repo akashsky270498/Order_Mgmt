@@ -4,7 +4,7 @@ from rest_framework.test import APIClient
 from django.urls import reverse
 from apps.users.models import User
 from apps.inventory.models import Product
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderItem
 
 class OrderAPITest(TestCase):
     def setUp(self):
