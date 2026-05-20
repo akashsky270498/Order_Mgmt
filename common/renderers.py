@@ -30,11 +30,74 @@ class CustomJSONRenderer(JSONRenderer):
                 actual_data = [data] if data is not None else []
 
         # Get custom message if provided from the view, otherwise set a sensible default
-        msg = "Request processed successfully"
+        msg = None
         if isinstance(data, dict) and "msg" in data:
             msg = data["msg"]
+        else:
+            # Try to infer a friendly message from the view, request and HTTP method
+            try:
+                view = renderer_context.get('view')
+                request = renderer_context.get('request')
+                method = request.method if request is not None else None
+
+                # Helper: infer resource name
+                resource = None
+                if view is not None:
+                    qs = getattr(view, 'queryset', None)
+                    if qs is not None and hasattr(qs, 'model'):
+                        resource = qs.model.__name__
+                    elif hasattr(view, 'serializer_class') and view.serializer_class is not None:
+                        ser = view.serializer_class
+                        if hasattr(ser, 'Meta') and hasattr(ser.Meta, 'model'):
+                            resource = ser.Meta.model.__name__
+
+                path = request.path if request is not None else ''
+
+                view_name = view.__class__.__name__ if view is not None else ''
+
+                # Special-case common endpoints
+                if 'register' in path or 'Register' in view_name:
+                    msg = "User registered successfully."
+                elif 'login' in path or 'token' in path or 'TokenObtainPairView' in view_name:
+                    msg = "User logged in successfully."
+                elif 'profile' in path or 'Profile' in view_name:
+                    msg = "Profile fetched successfully." if method == 'GET' else "Profile updated successfully."
+                elif 'orders' in path or 'Order' in view_name:
+                    if method == 'POST':
+                        msg = "Order placed successfully. Payment processing initiated asynchronously."
+                    elif method == 'PATCH' or method == 'PUT':
+                        msg = "Order updated successfully."
+                    else:
+                        msg = "Orders fetched successfully."
+                elif 'products' in path or 'Product' in view_name or resource == 'Product':
+                    if method == 'POST':
+                        msg = "Product created successfully."
+                    elif method in ('PATCH', 'PUT'):
+                        msg = "Product updated successfully."
+                    elif method == 'DELETE':
+                        msg = "Product deleted successfully."
+                    else:
+                        msg = "Products fetched successfully."
+                else:
+                    # Generic method-based messages with optional resource name
+                    verb = None
+                    if method == 'GET':
+                        verb = 'fetched'
+                    elif method == 'POST':
+                        verb = 'created'
+                    elif method in ('PATCH', 'PUT'):
+                        verb = 'updated'
+                    elif method == 'DELETE':
+                        verb = 'deleted'
+                    if resource:
+                        msg = f"{resource} {verb} successfully." if verb else "Request processed successfully"
+                    else:
+                        msg = f"Request processed successfully" if msg is None else msg
+            except Exception:
+                msg = "Request processed successfully"
             # Remove msg from actual_data if it got injected there
             if isinstance(actual_data, list) and len(actual_data) > 0 and isinstance(actual_data[0], dict) and "msg" in actual_data[0]:
+                actual_data[0] = actual_data[0].copy()
                 actual_data[0].pop("msg", None)
 
         response = {

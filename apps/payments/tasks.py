@@ -4,6 +4,9 @@ import time
 import random
 from apps.orders.models import Order
 from apps.payments.models import Payment
+import logging
+
+logger = logging.getLogger(__name__)
 
 @shared_task
 def process_payment(order_id):
@@ -44,7 +47,7 @@ def process_payment(order_id):
             order.save()
             
     except Order.DoesNotExist:
-        pass
+        logger.warning(f"Order {order_id} does not exist during payment processing.")
     except Exception as e:
-        # In a production system, we would log this to Sentry/Datadog and potentially retry
-        pass
+        logger.error(f"Error processing payment for order {order_id}", exc_info=True)
+        # In a real system, self.retry(exc=e) would be used here.

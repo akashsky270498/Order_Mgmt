@@ -3,8 +3,11 @@ from rest_framework.response import Response
 from django.db import transaction
 from .models import Order, OrderItem
 from apps.inventory.models import Product
-from .serializers import OrderSerializer
+from .serializers import OrderSerializer, OrderStatusUpdateSerializer
 from apps.payments.tasks import process_payment
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderListCreateView(generics.ListCreateAPIView):
     serializer_class = OrderSerializer
@@ -79,6 +82,7 @@ class OrderListCreateView(generics.ListCreateAPIView):
         except ValueError as e:
             return Response({"msg": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.error(f"Error placing order for user {request.user.email}", exc_info=True)
             return Response({"msg": "An unexpected error occurred while placing order."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class OrderDetailView(generics.RetrieveUpdateAPIView):
@@ -93,3 +97,23 @@ class OrderDetailView(generics.RetrieveUpdateAPIView):
         if self.request.user.role == 'ADMIN':
             return Order.objects.all()
         return Order.objects.filter(user=self.request.user)
+
+class OrderStatusUpdateView(generics.UpdateAPIView):
+    """
+    PATCH /api/orders/:id/status
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderStatusUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role != 'ADMIN':
+            return Response({"msg": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+            
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        order_data = OrderSerializer(instance).data
+        return Response({"msg": "Order status updated successfully.", "data": order_data})
