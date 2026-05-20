@@ -1,5 +1,8 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from apps.users.models import User
 from .serializers import UserSerializer, RegisterSerializer
 
@@ -35,3 +38,26 @@ class ProfileView(generics.RetrieveAPIView):
             "msg": "Profile fetched successfully.", 
             "data": serializer.data
         })
+
+
+class LogoutView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(
+                {"msg": "Refresh token is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError:
+            return Response(
+                {"msg": "Refresh token is invalid or already blacklisted."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({"msg": "Logged out successfully."}, status=status.HTTP_200_OK)

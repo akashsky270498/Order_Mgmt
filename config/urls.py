@@ -19,6 +19,9 @@ urlpatterns = [
     
     # Auth Service Endpoints
     path('api/auth/', include('apps.authentication.urls')),
+
+    # Admin User Management Endpoints
+    path('api/users/', include('apps.users.urls')),
     
     # Inventory Service Endpoints
     path('api/products/', include('apps.inventory.urls')),

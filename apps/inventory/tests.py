@@ -14,6 +14,10 @@ class InventoryAPITest(TestCase):
         response = self.client.post(login_url, {'email': 'admin@test.com', 'password': 'password123'}, format='json')
         self.admin_token = response.data['access']
 
+    def test_anonymous_user_cannot_list_products(self):
+        response = self.client.get(reverse('product_list_create'))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_admin_can_create_product(self):
         response = self.client.post(
             reverse('product_list_create'),

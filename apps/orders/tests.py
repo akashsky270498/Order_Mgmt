@@ -5,6 +5,7 @@ from django.urls import reverse
 from apps.users.models import User
 from apps.inventory.models import Product
 from apps.orders.models import Order, OrderItem
+from unittest.mock import patch
 
 class OrderAPITest(TestCase):
     def setUp(self):
@@ -16,7 +17,8 @@ class OrderAPITest(TestCase):
         response = self.client.post(login_url, {'email': 'customer@test.com', 'password': 'password123'}, format='json')
         self.customer_token = response.data['access']
 
-    def test_place_order_success(self):
+    @patch('apps.orders.views.process_payment.delay')
+    def test_place_order_success(self, _delay):
         response = self.client.post(
             reverse('order_list_create'),
             {'order_items': [{'product': str(self.product.id), 'quantity': 2}]},

@@ -9,8 +9,9 @@ class Order(BaseModel):
         ('INVENTORY_RESERVED', 'Inventory Reserved'),
         ('PAYMENT_PROCESSING', 'Payment Processing'),
         ('COMPLETED', 'Completed'),
-        ('FAILED', 'Failed'),
+        ('PAYMENT_FAILED', 'Payment Failed'),
         ('CANCELLED', 'Cancelled'),
+        ('OUT_OF_STOCK', 'Out of Stock'),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')

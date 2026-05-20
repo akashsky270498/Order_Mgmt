@@ -20,13 +20,14 @@ To prevent the user from waiting for a slow payment gateway response:
 1. Order is validated, stock is reserved, and Order is saved as `INVENTORY_RESERVED`.
 2. A Celery task `process_payment.delay(order_id)` is pushed to the Redis message broker.
 3. The API immediately returns a `201 Created` response to the React Frontend.
-4. The background Celery worker picks up the task, simulates a payment gateway delay, and updates the Order status to `COMPLETED` or `FAILED`.
+4. The background Celery worker picks up the task, simulates a payment gateway delay, and updates the Order status to `COMPLETED` or `PAYMENT_FAILED`.
 5. If the payment fails, the Celery task safely rolls back the reserved inventory stock.
 
 ## 🔐 Authentication & Security Flow
 
 * **JWT (JSON Web Tokens):** Used for stateless, scalable authentication. Tokens expire after 60 minutes, with refresh tokens lasting 1 day.
 * **Role-Based Access Control (RBAC):** Custom permission classes (`IsAdminRole`, `IsCustomerRole`) strictly protect endpoints. Customers cannot access Admin routes.
+* **Logout Blacklisting:** `POST /api/auth/logout/` blacklists the submitted refresh token, while the frontend immediately removes stored access and refresh tokens.
 * **Global Exception Handling:** A centralized Exception Handler catches all errors and formats them into a strict standard JSON response, ensuring internal stack traces never leak to the client.
 
 ## 🚀 Setup Instructions
@@ -81,6 +82,15 @@ celery -A config worker --loglevel=info --pool=solo
 * The backend includes an `AuditLog` model and `AuditMiddleware`.
 * Every `/api/` request is recorded with `user`, `method`, `path`, `IP address`, `status code`, and request payload.
 * Sensitive fields such as `password` are sanitized before logging.
+
+## Admin User Management
+Admins can manage users through protected `/api/users/` endpoints:
+* `GET /api/users/` lists users.
+* `POST /api/users/` creates customer or admin accounts.
+* `PATCH /api/users/{id}/` updates profile fields, role, active state, or password.
+* `DELETE /api/users/{id}/` deletes users, with self-delete blocked.
+
+Public registration always creates `CUSTOMER` users. Admin roles can only be assigned from the authenticated admin user-management API.
 
 ## 🔁 Celery Retry & Payment Reliability
 * Celery payment tasks now include retry support with `max_retries=3` and a `30s` default retry delay.

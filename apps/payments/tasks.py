@@ -46,7 +46,7 @@ def process_payment(self, order_id):
             else:
                 payment.status = 'FAILED'
                 payment.error_message = 'Insufficient funds or gateway timeout'
-                order.status = 'FAILED'
+                order.status = 'PAYMENT_FAILED'
                 
                 # Payment Failed -> Rollback reserved inventory!
                 for item in order.items.select_for_update():

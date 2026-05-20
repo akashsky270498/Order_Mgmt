@@ -10,11 +10,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=False, default='CUSTOMER')
     
     class Meta:
         model = User
-        fields = ('email', 'password', 'first_name', 'last_name', 'role')
+        fields = ('email', 'password', 'first_name', 'last_name')
         
     def create(self, validated_data):
         user = User.objects.create(
@@ -22,7 +21,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             username=validated_data['email'], # Django requirement for AbstractUser
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
-            role=validated_data.get('role', 'CUSTOMER')
+            role='CUSTOMER'
         )
         user.set_password(validated_data['password'])
         user.save()
