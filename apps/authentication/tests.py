@@ -1,51 +1,45 @@
-import pytest
-from django.urls import reverse
+from django.test import TestCase
 from rest_framework import status
+from rest_framework.test import APIClient
+from django.urls import reverse
 from apps.users.models import User
 
-@pytest.mark.django_db
-class TestAuthenticationAPI:
-    def test_login_missing_email(self, client):
-        url = reverse('auth_login')
-        data = {
-            'username': 'admin@test.com',
-            'password': 'password123'
-        }
-        response = client.post(url, data, content_type='application/json')
-        print("Missing email status:", response.status_code)
-        print("Missing email data:", response.data)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+class AuthenticationAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.login_url = reverse('auth_login')
+        self.profile_url = reverse('auth_profile')
 
-    def test_login_invalid_credentials(self, client):
-        url = reverse('auth_login')
-        data = {
-            'email': 'nonexistent@test.com',
-            'password': 'wrongpassword'
-        }
-        response = client.post(url, data, content_type='application/json')
-        print("Invalid creds status:", response.status_code)
-        print("Invalid creds data:", response.data)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    def test_login_and_profile_with_prefixless_token(self, client):
-        # Create user
-        user = User.objects.create_user(email='testuser@test.com', password='password123')
-        
-        # Log in
-        url = reverse('auth_login')
-        data = {
-            'email': 'testuser@test.com',
-            'password': 'password123'
-        }
-        response = client.post(url, data, content_type='application/json')
-        token = response.data['access']
-        
-        # Access profile without Bearer prefix
-        profile_url = reverse('auth_profile')
-        response = client.get(
-            profile_url,
-            HTTP_AUTHORIZATION=token  # Just raw token
+    def test_login_missing_email(self):
+        response = self.client.post(
+            self.login_url,
+            {'username': 'admin@test.com', 'password': 'password123'},
+            format='json'
         )
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data['data']['email'] == 'testuser@test.com'
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_login_invalid_credentials(self):
+        response = self.client.post(
+            self.login_url,
+            {'email': 'nonexistent@test.com', 'password': 'wrongpassword'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_login_and_profile_with_prefixless_token(self):
+        User.objects.create_user(email='testuser@test.com', password='password123')
+        response = self.client.post(
+            self.login_url,
+            {'email': 'testuser@test.com', 'password': 'password123'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        token = response.data['access']
+        response = self.client.get(
+            self.profile_url,
+            HTTP_AUTHORIZATION=token,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['data']['email'], 'testuser@test.com')
 

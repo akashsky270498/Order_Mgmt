@@ -8,24 +8,34 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@shared_task
-def process_payment(order_id):
+@shared_task(bind=True, max_retries=3, default_retry_delay=30)
+def process_payment(self, order_id):
     """
-    Simulates asynchronous payment processing.
+    Simulates asynchronous payment processing with retry support.
     """
     try:
         order = Order.objects.get(id=order_id)
         
-        # Simulate Network Delay (Payment Gateway)
-        time.sleep(3) 
-        
         with transaction.atomic():
-            # Create a pending payment record
-            payment = Payment.objects.create(
+            if order.status == 'INVENTORY_RESERVED':
+                order.status = 'PAYMENT_PROCESSING'
+                order.save(update_fields=['status'])
+
+            # Simulate Network Delay (Payment Gateway)
+            time.sleep(3)
+            
+            # Create or update payment record
+            payment, _ = Payment.objects.get_or_create(
                 order=order,
-                amount=order.total_amount,
-                status='PENDING'
+                defaults={
+                    'amount': order.total_amount,
+                    'status': 'PENDING'
+                }
             )
+            payment.status = 'PENDING'
+            payment.amount = order.total_amount
+            payment.error_message = ''
+            payment.save()
             
             # Simulate Success/Failure (80% success rate)
             success = random.random() < 0.8
@@ -50,4 +60,4 @@ def process_payment(order_id):
         logger.warning(f"Order {order_id} does not exist during payment processing.")
     except Exception as e:
         logger.error(f"Error processing payment for order {order_id}", exc_info=True)
-        # In a real system, self.retry(exc=e) would be used here.
+        raise self.retry(exc=e)
