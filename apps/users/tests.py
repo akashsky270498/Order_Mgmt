@@ -17,26 +17,23 @@ class AdminUserManagementAPITest(TestCase):
         self.admin_token = admin_login.data['access']
         self.customer_token = customer_login.data['access']
 
-    def test_admin_can_create_user_with_role(self):
-        response = self.client.post(
-            reverse('admin_user_list_create'),
-            {
-                'email': 'manager@test.com',
-                'password': 'StrongPass123!',
-                'first_name': 'Ops',
-                'last_name': 'Manager',
-                'role': 'ADMIN',
-                'is_active': True,
-            },
-            format='json',
+    def test_admin_can_list_customer_users(self):
+        User.objects.create_user(email='another@test.com', password='password123', role='CUSTOMER')
+
+        response = self.client.get(
+            reverse('customer_user_list'),
             HTTP_AUTHORIZATION=f'Bearer {self.admin_token}',
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.get(email='manager@test.com').role, 'ADMIN')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_customer_cannot_manage_users(self):
+        results = response.data['results']
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(user['role'] == 'CUSTOMER' for user in results))
+        self.assertNotIn('admin@test.com', [user['email'] for user in results])
+
+    def test_customer_cannot_list_users(self):
         response = self.client.get(
-            reverse('admin_user_list_create'),
+            reverse('customer_user_list'),
             HTTP_AUTHORIZATION=f'Bearer {self.customer_token}',
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
