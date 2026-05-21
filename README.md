@@ -130,4 +130,5 @@ pytest apps/orders/tests.py
 ## ⚖️ Tradeoff Discussions
 * **MySQL vs PostgreSQL:** MySQL was chosen based on hardware constraints and environment. Both support ACID transactions perfectly for this use case.
 * **Modular Monolith vs Physical Microservices:** Given the memory constraints (8GB RAM) and the overhead of Docker/Kubernetes, a physical microservice architecture would fail to run locally. The Modular Monolith offers the exact same logical separation of concerns but runs extremely fast and lightweight.
-* **Soft Deletes:** Currently, Products are "soft-deleted" using `is_active=False` rather than hard deleted to preserve Order history. This increases DB size over time but is a mandatory tradeoff for compliance.
+* **Soft Deletes:** Currently, Products are "soft-deleted" using `is_active=False` rather rather hard deleted to preserve Order history. This increases DB size over time but is a mandatory tradeoff for compliance.
+* **Database Hosting:** Due to certain reasons, the database is not hosted remotely. **Testers can use their own MySQL database** by connecting to the backend via their own database credentials. This allows full testing independence without requiring a shared production database.
