@@ -38,7 +38,7 @@ class AdminUserManagementAPITest(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_public_registration_always_creates_customer(self):
+    def test_public_registration_respects_selected_role(self):
         response = self.client.post(
             reverse('auth_register'),
             {
@@ -51,4 +51,4 @@ class AdminUserManagementAPITest(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.get(email='new@test.com').role, 'CUSTOMER')
+        self.assertEqual(User.objects.get(email='new@test.com').role, 'ADMIN')

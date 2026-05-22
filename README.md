@@ -98,6 +98,32 @@ Public registration always creates `CUSTOMER` users. Admin roles can only be ass
 * The order lifecycle is preserved: reserved inventory may be restored safely if payment ultimately fails.
 
 ## 🧪 Testing the Backend
+
+### Swagger Documentation
+Interactive API documentation is available at:
+```
+http://127.0.0.1:8000/swagger/
+```
+Try all endpoints directly from your browser with auto-generated forms.
+
+### Postman Collection
+A complete Postman collection is included in this repository: `Postman_Collection.json`
+
+**To import in Postman:**
+1. Open Postman
+2. Click **Import** → **Upload Files**
+3. Select `Postman_Collection.json`
+4. Set the environment variables (access_token, admin_token, user_id, etc.) after logging in
+
+**Collection includes:**
+- ✅ Authentication (register, login, logout, refresh)
+- ✅ User Management (list, toggle status, profile, password)
+- ✅ Product Management (CRUD)
+- ✅ Order Management (create, list, update, cancel)
+- ✅ Payment Tracking
+- ✅ Admin Analytics
+
+### Pytest Unit Tests
 Run the test suite with `pytest` from the `backend` folder:
 ```bash
 cd backend
@@ -128,7 +154,49 @@ pytest apps/orders/tests.py
   ```
 
 ## ⚖️ Tradeoff Discussions
+
+### Architecture & Technology Choices
 * **MySQL vs PostgreSQL:** MySQL was chosen based on hardware constraints and environment. Both support ACID transactions perfectly for this use case.
 * **Modular Monolith vs Physical Microservices:** Given the memory constraints (8GB RAM) and the overhead of Docker/Kubernetes, a physical microservice architecture would fail to run locally. The Modular Monolith offers the exact same logical separation of concerns but runs extremely fast and lightweight.
-* **Soft Deletes:** Currently, Products are "soft-deleted" using `is_active=False` rather rather hard deleted to preserve Order history. This increases DB size over time but is a mandatory tradeoff for compliance.
-* **Database Hosting:** Due to certain reasons, the database is not hosted remotely. **Testers can use their own MySQL database** by connecting to the backend via their own database credentials. This allows full testing independence without requiring a shared production database.
+* **Soft Deletes:** Currently, Products are "soft-deleted" using `is_active=False` rather than hard deleted to preserve Order history. This increases DB size over time but is a mandatory tradeoff for compliance.
+
+### Deployment & Infrastructure
+
+#### Docker Not Implemented
+- **Reason:** The development system has only 8GB of RAM. Docker adds significant memory overhead for container runtime, images, and services. Running Docker locally caused the system to hang and become unresponsive, making development extremely slow and frustrating.
+- **Trade-off:** Development is faster and more responsive on the host machine. For production deployment, Docker would provide excellent benefits (consistency, scaling, CI/CD). However, for local development and this assessment timeline, running natively was the pragmatic choice.
+- **For Production:** Dockerfile and docker-compose.yml can be easily created following standard Django best practices if needed for cloud deployment.
+
+#### Backend & Frontend Not Hosted
+- **Reason:** The database hosting attempted on Railway.com failed due to URL/connection configuration issues (likely MySQL/connection pool settings not properly configured for the Railway environment).
+- **Trade-off:** Without a reliable hosted database, hosting the backend and frontend separately would create deployment fragmentation and testing complexity. Testing requires backend + frontend + database to work together seamlessly.
+- **Current Status:** The complete application can be tested locally by following the Setup Instructions above. Both GitHub repositories contain full, working code with Swagger API documentation.
+
+### How to Test the Application
+Since the application is not currently hosted, follow these steps to test locally:
+
+1. **Backend Setup** (this repository):
+   ```bash
+   cd backend
+   .\venv\Scripts\activate
+   python manage.py migrate
+   python manage.py runserver
+   ```
+   Access Swagger docs at `http://127.0.0.1:8000/swagger/`
+
+2. **Celery Worker** (in a separate terminal):
+   ```bash
+   cd backend
+   .\venv\Scripts\activate
+   celery -A config worker --loglevel=info --pool=solo
+   ```
+
+3. **Frontend Setup** (separate repository):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   Access the application at `http://127.0.0.1:5173/`
+
+4. **API Testing:** Use the Swagger interface at `http://127.0.0.1:8000/swagger/` or the Postman collection provided in the GitHub repository. 
